@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+  <flow name="dscldap">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/dscldap" doc:name="HTTP"/>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+           <set-property propertyName="Access-Control-Allow-Origin" value="*" doc:name="CORS-Origin"/>
+         <set-property propertyName="Access-Control-Allow-Methods" value="OPTIONS,POST" doc:name="CORS-Options" />
+         <set-property propertyName="ACCESS-CONTROL-ALLOW-HEADERS" value="Content-Type" doc:name="CORS-Content"/>  
+        <scripting:transformer doc:name="Groovy-VerifyJson">
+            <scripting:script engine="Groovy"><![CDATA[import groovy.json.*;
+
+try
+{
+def json= new JsonSlurper().parseText([payload]);
+ 
+return payload;
+}
+catch (Exception e)
+{
+  // System.out.println (" Invalid Json object")
+  return "{\"user\":\"none\",  \"pass\":\"none\"}"
+}
+
+ ]]></scripting:script>
+        </scripting:transformer>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+  
+  
+        
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <enricher target="#[flowVars.myJsonMap]" doc:name="Message Enricher">
+       <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        </enricher>
+        
+        <logger message="#[payload.username]" level="INFO" doc:name="Logger"/>
+
+        <component class="dscldap.ldap" doc:name="Java"/>
+    </flow>
+    
+
+
+
+
+</mule>
